@@ -7,7 +7,7 @@ TestData = namedtuple(
     )
 )
 
-TRAINING_DATA = [
+TEST_DATA = [
     TestData(
         data=[
             0, 1, 0,
