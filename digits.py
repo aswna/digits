@@ -22,14 +22,18 @@ def main():
 
 
 def train(digit):
-    print('TRAINING DATA')
-    best_weights = [random.uniform(-10, 10) for i in range(DIM)]
-    best_b = random.uniform(-10, 10)
+    print('TRAINING DATA for digit = {}'.format(digit))
+    range_limit_low = 0
+    range_limit_hi = 1
+    best_weights = [random.uniform(-range_limit_low, range_limit_hi)
+                    for i in range(DIM)]
+    best_b = random.uniform(-range_limit_low, range_limit_hi)
 
     min_sum_error_squared = 9999999999.9
-    for _ in range(10000):
-        weights = [random.uniform(-10, 10) for i in range(DIM)]
-        b = random.uniform(-10, 10)
+    for iteration in range(100000):
+        weights = [random.uniform(-range_limit_low, range_limit_hi)
+                   for i in range(DIM)]
+        b = random.uniform(-range_limit_low, range_limit_hi)
 
         sum_error_squared = 0.0
         for data in [
@@ -43,8 +47,8 @@ def train(digit):
             best_weights = weights.copy()
             best_b = b
             # print(
-            #     'Found better parameters: weights = {}, b = {} [{}]'
-            #     .format(weights, b, min_sum_error_squared))
+            #     'Found better parameters ({}): weights = {}, b = {} [{}]'
+            #     .format(iteration, weights, b, min_sum_error_squared))
 
     print('Using best parameters: weights = {}, b = {} for digit = {}'
           .format(best_weights, best_b, digit))
@@ -69,7 +73,8 @@ def test(digits_to_weights):
 
 
 def guess_digit(data, weights, b):
-    return sigmoid(sum(weights[i] * data[i] for i in range(DIM)) + b) * 9.0
+    # return sigmoid(sum(weights[i] * data[i] for i in range(DIM)) + b) * 9.0
+    return sigmoid(sum(weights[i] * data[i] for i in range(DIM))) * 9.0
 
 
 def fit_digit(data, digits_to_weights):

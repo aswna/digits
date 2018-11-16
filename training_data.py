@@ -38,16 +38,16 @@ TRAINING_DATA = [
         ],
         digit=0
     ),
-    TrainingData(
-        data=[
-            0, 0, 1,
-            0, 0, 1,
-            0, 0, 1,
-            0, 0, 1,
-            0, 0, 1
-        ],
-        digit=1
-    ),
+    # TrainingData(
+    #     data=[
+    #         0, 0, 1,
+    #         0, 0, 1,
+    #         0, 0, 1,
+    #         0, 0, 1,
+    #         0, 0, 1
+    #     ],
+    #     digit=1
+    # ),
     TrainingData(
         data=[
             0, 1, 0,
@@ -58,26 +58,26 @@ TRAINING_DATA = [
         ],
         digit=1
     ),
-    TrainingData(
-        data=[
-            0, 0, 1,
-            0, 1, 1,
-            0, 0, 1,
-            0, 0, 1,
-            0, 0, 1
-        ],
-        digit=1
-    ),
-    TrainingData(
-        data=[
-            0, 0, 1,
-            0, 1, 1,
-            1, 0, 1,
-            0, 0, 1,
-            0, 0, 1
-        ],
-        digit=1
-    ),
+    # TrainingData(
+    #     data=[
+    #         0, 0, 1,
+    #         0, 1, 1,
+    #         0, 0, 1,
+    #         0, 0, 1,
+    #         0, 0, 1
+    #     ],
+    #     digit=1
+    # ),
+    # TrainingData(
+    #     data=[
+    #         0, 0, 1,
+    #         0, 1, 1,
+    #         1, 0, 1,
+    #         0, 0, 1,
+    #         0, 0, 1
+    #     ],
+    #     digit=1
+    # ),
     TrainingData(
         data=[
             0, 1, 0,
@@ -148,16 +148,16 @@ TRAINING_DATA = [
         ],
         digit=4
     ),
-    TrainingData(
-        data=[
-            1, 0, 0,
-            1, 0, 0,
-            1, 1, 1,
-            0, 1, 0,
-            0, 1, 0
-        ],
-        digit=4
-    ),
+    # TrainingData(
+    #     data=[
+    #         1, 0, 0,
+    #         1, 0, 0,
+    #         1, 1, 1,
+    #         0, 1, 0,
+    #         0, 1, 0
+    #     ],
+    #     digit=4
+    # ),
     TrainingData(
         data=[
             1, 1, 1,
