@@ -46,13 +46,19 @@ MNIST_LabelFileHeader = namedtuple(
     ]
 )
 
-Cell = namedtuple(
-    "Cell", [
-        "input",  # 28x28
-        "weight",  # 28x28
-        "output",
-    ]
-)
+
+class Cell:
+    def __init__(self, input, weight, output):
+        self.input = input  # 28x28
+        self.weight = weight  # 28x28
+        self.size = len(self.input)
+        assert self.size == len(self.weight), "Mismatching input - weight lengths"
+        self.output = output
+
+    def __str__(self):
+        # TODO: this is a dummy implementation
+        return "weight = {}".format(self.weight[300])
+
 
 Layer = namedtuple(
     "Layer", [
@@ -68,8 +74,48 @@ Vector = namedtuple(
 
 
 def main():
-    images = read_image_file("./train-images-idx3-ubyte")
-    labels = read_label_file("./train-labels-idx1-ubyte")
+    train_images = read_image_file("./train-images-idx3-ubyte")
+    train_labels = read_label_file("./train-labels-idx1-ubyte")
+    initial_layer = initLayer()
+    trained_layer = trainLayer(initial_layer, train_images, train_labels)
+
+    # test_images = read_image_file("./t10k-images-idx3-ubyte")
+    # test_labels = read_label_file("./t10k-labels-idx1-ubyte")
+    # testLayer(trained_layer, test_images, test_labels)
+
+
+def trainLayer(layer, images, labels):
+    errorCount = 0
+    for index, (image, label) in enumerate(zip(images, labels)):
+        targetOutput = getTargetOutput(label)
+        # print("before = {}".format(layer.cells[0]))
+        for cell, target in zip(layer.cells, targetOutput):
+            trainCell(cell, image, target)
+        predictedNumber = getLayerPrediction(layer)
+        if predictedNumber != label.value:
+            errorCount += 1
+            if not errorCount % 1000:
+                print(
+                    "Prediction: {}, Actual: {} at image {}".format(
+                        predictedNumber,
+                        label.value,
+                        index,
+                    )
+                )
+        # print("after  = {}".format(layer.cells[0]))
+
+
+
+def getTargetOutput(label):
+    """Create target vector according to target number."""
+    return [1 if x == label else 0 for x in range(10)]
+
+
+def trainCell(cell, image, target):
+    setCellInput(cell, image);
+    calcCellOutput(cell);
+    error = getCellError(cell, target);
+    updateCellWeights(cell, error);
 
 
 def read_image_file(filename):
@@ -123,18 +169,11 @@ def read_label_file(filename):
     buffer = data[struct_len:]
     struct_fmt = '>B'
     struct_len = struct.calcsize(struct_fmt)
-    labels = [MNIST_Label(x) for x in struct.iter_unpack(struct_fmt, buffer)]
+    labels = [MNIST_Label(x[0]) for x in struct.iter_unpack(struct_fmt, buffer)]
     assert header.maxLabels == len(labels)
     print("first label: {}".format(labels[0]))
     print("last label : {}".format(labels[-1]))
     return labels
-
-
-def trainCell(cell, image, target):
-    setCellInput(cell, image);
-    calcCellOutput(cell);
-    error = getCellError(cell, target);
-    updateCellWeights(cell, error);
 
 
 def setCellInput(cell, image):
@@ -158,7 +197,7 @@ def getCellError(cell, target):  # target: 0 or 1
 
 def updateCellWeights(cell, error):
     LEARNING_RATE = 0.05
-    for i in range(len(cell.pixels)):
+    for i in range(cell.size):
         cell.weight[i] += LEARNING_RATE * cell.input[i] * error
 
 
@@ -170,10 +209,6 @@ def getLayerPrediction(layer):
             maxOut = layer.cells[i].output
             maxInd = i
     return maxInd
-
-
-def get_target_output(label):
-    return [1 if x == label else 0 for x in range(10)]
 
 
 def get_init_input():
