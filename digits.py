@@ -21,11 +21,11 @@ from collections import namedtuple
 LEARNING_RATE = 0.05
 
 
-MNISTImage = namedtuple(
-    "MNISTImage", [
-        "pixels",  # 28x28
-    ]
-)
+class MNISTImage:
+    def __init__(self, pixels):
+        self.pixels = pixels
+        self.bw_pixels = [int(bool(pixel)) for pixel in pixels]
+
 
 MNISTLabel = namedtuple(
     "MNISTLabel", [
@@ -51,17 +51,19 @@ MNISTLabelFileHeader = namedtuple(
 
 
 class Cell:
-    def __init__(self, input_vector, weight, output):
-        # TODO: input_vector/output should not be member?
-        self.input_vector = input_vector  # 28x28
-        self.weight = weight  # 28x28
-        self.size = len(self.input_vector)
-        assert self.size == len(self.weight), "Mismath in input/weight lengths"
-        self.output = output  # range: [0, 1]
+    def __init__(self):
+        self.weight = get_init_weight()  # 28x28
+        self.size = len(self.weight)
+        self.output = 0  # range: [0, 1]
 
     def __str__(self):
         # TODO: this is a dummy implementation for testing
         return "weight = {}".format(self.weight[300])
+
+
+def get_init_weight():
+    # TODO: use header.imgHeight * header.imgWidth
+    return [random.uniform(0, 1) for x in range(28*28)]
 
 
 Layer = namedtuple(
@@ -119,10 +121,9 @@ def get_target_output(label):
 
 
 def train_cell(cell, image, target):
-    set_cell_input(cell, image)
-    calc_cell_output(cell)
+    calc_cell_output(cell, image)
     error = get_cell_error(cell, target)
-    update_cell_weights(cell, error)
+    update_cell_weights(cell, image, error)
 
 
 def read_image_file(filename):
@@ -143,7 +144,10 @@ def read_image_file(filename):
     buffer = data[struct_len:]
     struct_fmt = '>{}B'.format(header.imgHeight * header.imgWidth)
     struct_len = struct.calcsize(struct_fmt)
-    images = [MNISTImage(x) for x in struct.iter_unpack(struct_fmt, buffer)]
+    images = [
+        MNISTImage(x)
+        for x in struct.iter_unpack(struct_fmt, buffer)
+    ]
     # print("first image:\n{}".format(images[0]))
     print("first image:")
     print_image(images[0].pixels)
@@ -195,28 +199,20 @@ def read_label_file(filename):
     return labels
 
 
-def set_cell_input(cell, image):
-    for i in range(len(image.pixels)):
-        cell.input_vector[i] = int(bool(image.pixels[i]))
-        # TODO: try?
-        # cell.input_vector[i] = 1 if image.pixels[i] > 100 else 0
-
-
-def calc_cell_output(cell):
+def calc_cell_output(cell, image):
     cell.output = 0
-    size = len(cell.input_vector)  # TODO: check size
-    for i in range(size):
-        cell.output += cell.input_vector[i] * cell.weight[i]
-    cell.output /= size  # normalize output [0, 1]
+    for i in range(cell.size):
+        cell.output += image.bw_pixels[i] * cell.weight[i]
+    cell.output /= cell.size  # normalize output [0, 1]
 
 
 def get_cell_error(cell, target):  # target: 0 or 1
     return target - cell.output
 
 
-def update_cell_weights(cell, error):
+def update_cell_weights(cell, image, error):
     for i in range(cell.size):
-        cell.weight[i] += LEARNING_RATE * cell.input_vector[i] * error
+        cell.weight[i] += LEARNING_RATE * image.bw_pixels[i] * error
 
 
 def get_layer_prediction(layer):
@@ -230,18 +226,8 @@ def get_layer_prediction(layer):
     # TODO: show seconds most probable prediction
 
 
-def get_init_input():
-    # TODO: use header.imgHeight * header.imgWidth
-    return [0 for x in range(28*28)]
-
-
-def get_init_weight():
-    # TODO: use header.imgHeight * header.imgWidth
-    return [random.uniform(0, 1) for x in range(28*28)]
-
-
 def get_init_cell():
-    return Cell(get_init_input(), get_init_weight(), 0)
+    return Cell()
 
 
 def init_layer():  # get_init_layer
