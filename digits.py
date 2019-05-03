@@ -11,6 +11,9 @@ Note: download and extract data files from http://yann.lecun.com/exdb/mnist/
 
 See also:
     https://github.com/mmlind/mnist-1lnn/
+
+TODO:
+https://en.wikipedia.org/wiki/Hilbert_curve#Applications_and_mapping_algorithms
 """
 
 import struct
@@ -19,19 +22,8 @@ from collections import namedtuple
 
 
 LEARNING_RATE = 0.05
+DIM = 32
 
-
-class MNISTImage:
-    def __init__(self, pixels):
-        self.pixels = pixels
-        self.bw_pixels = [int(bool(pixel)) for pixel in pixels]
-
-
-MNISTLabel = namedtuple(
-    "MNISTLabel", [
-        "value",
-    ]
-)
 
 MNISTImageFileHeader = namedtuple(
     "MNISTImageFileHeader", [
@@ -39,6 +31,60 @@ MNISTImageFileHeader = namedtuple(
         "maxImages",
         "imgWidth",
         "imgHeight",
+    ]
+)
+
+
+class MNISTImage:
+    def __init__(self, header, pixels):
+        self.pixels = pixels
+        assert header.imgWidth == header.imgHeight
+        # TODO: get closest (upper) power of 2
+        n = DIM
+        n2 = n ** 2
+        self.bw_pixels = [0] * n2
+        # print('n2 = {}, pixels = {}'.format(n2, self.bw_pixels))
+        # self.bw_pixels = [int(bool(pixel)) for pixel in pixels]
+        j = 0
+        for i in range(n2):
+            x = i % header.imgWidth
+            y = i // header.imgHeight
+            d = xy2d(n, x, y)
+            # print('i = {}, x = {}, y = {}, d = {}'.format(i, x, y, d))
+            if 1 < x < n and 1 < y < n:
+                self.bw_pixels[d] = int(bool(pixels[j]))
+                # print('j = {}, d = {}'.format(j, d))
+                j += 1
+            else:
+                self.bw_pixels[d] = 0
+
+
+# convert (x, y) to d
+def xy2d(n, x, y):
+    d = 0
+    s = n//2
+    while s > 0:
+        rx = (x & s) > 0
+        ry = (y & s) > 0
+        d += s * s * ((3 * rx) ^ ry)
+        x, y = rot(n, x, y, rx, ry)
+        s //= 2
+    return d
+
+
+# rotate/flip a quadrant appropriately
+def rot(n, x, y, rx, ry):
+    if ry == 0:
+        if rx == 1:
+            x = n - 1 - x
+            y = n - 1 - y
+        x, y = y, x
+    return x, y
+
+
+MNISTLabel = namedtuple(
+    "MNISTLabel", [
+        "value",
     ]
 )
 
@@ -52,18 +98,14 @@ MNISTLabelFileHeader = namedtuple(
 
 class Cell:
     def __init__(self):
-        self.weight = get_init_weight()  # 28x28
+        # TODO: use header.imgHeight * header.imgWidth
+        self.weight = [random.uniform(0, 1) for x in range(DIM**2)]
         self.size = len(self.weight)
         self.output = 0  # range: [0, 1]
 
     def __str__(self):
         # TODO: this is a dummy implementation for testing
         return "weight = {}".format(self.weight[300])
-
-
-def get_init_weight():
-    # TODO: use header.imgHeight * header.imgWidth
-    return [random.uniform(0, 1) for x in range(28*28)]
 
 
 Layer = namedtuple(
@@ -74,9 +116,9 @@ Layer = namedtuple(
 
 
 def main():
+    initial_layer = Layer([Cell() for x in range(10)])
     train_images = read_image_file("./train-images-idx3-ubyte")
     train_labels = read_label_file("./train-labels-idx1-ubyte")
-    initial_layer = init_layer()
     trained_layer = use_layer(initial_layer, train_images, train_labels,
                               train=True)
 
@@ -145,8 +187,8 @@ def read_image_file(filename):
     struct_fmt = '>{}B'.format(header.imgHeight * header.imgWidth)
     struct_len = struct.calcsize(struct_fmt)
     images = [
-        MNISTImage(x)
-        for x in struct.iter_unpack(struct_fmt, buffer)
+        MNISTImage(header, pixels)
+        for pixels in struct.iter_unpack(struct_fmt, buffer)
     ]
     # print("first image:\n{}".format(images[0]))
     print("first image:")
@@ -224,15 +266,6 @@ def get_layer_prediction(layer):
             index_of_cell_with_max_output = i
     return index_of_cell_with_max_output
     # TODO: show seconds most probable prediction
-
-
-def get_init_cell():
-    return Cell()
-
-
-def init_layer():  # get_init_layer
-    cells = [get_init_cell() for x in range(10)]
-    return Layer(cells)
 
 
 if __name__ == "__main__":
