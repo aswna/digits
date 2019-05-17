@@ -18,6 +18,7 @@ https://en.wikipedia.org/wiki/Hilbert_curve#Applications_and_mapping_algorithms
 
 import struct
 import random
+# import sys
 from collections import namedtuple
 
 
@@ -36,6 +37,8 @@ MNISTImageFileHeader = namedtuple(
 
 
 class MNISTImage:
+    xy2d_map = dict()
+
     def __init__(self, header, pixels):
         self.pixels = pixels
         assert header.imgWidth == header.imgHeight
@@ -47,16 +50,24 @@ class MNISTImage:
         # self.bw_pixels = [int(bool(pixel)) for pixel in pixels]
         j = 0
         for i in range(n2):
-            x = i % header.imgWidth
-            y = i // header.imgHeight
-            d = xy2d(n, x, y)
-            # print('i = {}, x = {}, y = {}, d = {}'.format(i, x, y, d))
-            if 1 < x < n and 1 < y < n:
+            x = i % n
+            y = i // n
+            if (x, y) not in self.xy2d_map:
+                d = xy2d(n, x, y)
+                self.xy2d_map[(x, y)] = d
+            d = self.xy2d_map[(x, y)]
+            # print('  i = {}, x = {}, y = {}, d = {}'.format(i, x, y, d))
+            if 2 <= x < n - 2 and 2 <= y < n - 2:
+                # print('* i = {}, x = {}, y = {}, d = {}'.format(i, x, y, d))
                 self.bw_pixels[d] = int(bool(pixels[j]))
-                # print('j = {}, d = {}'.format(j, d))
+                # self.bw_pixels[d] = pixels[j] / 255
+                # print('* i = {}, x = {}, y = {}, d = {}, pixel = {}'
+                #       .format(i, x, y, d, self.bw_pixels[d]))
                 j += 1
             else:
+                # print('E i = {}, x = {}, y = {}, d = {}'.format(i, x, y, d))
                 self.bw_pixels[d] = 0
+        # sys.exit()
 
 
 # convert (x, y) to d
