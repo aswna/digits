@@ -16,11 +16,15 @@ TODO:
 https://en.wikipedia.org/wiki/Hilbert_curve#Applications_and_mapping_algorithms
 """
 
+import os
 import struct
+import pickle
 import random
 # import sys
 from collections import namedtuple
 
+
+from PIL import Image
 
 LEARNING_RATE = 0.05
 DIM = 32
@@ -127,15 +131,41 @@ Layer = namedtuple(
 
 
 def main():
-    initial_layer = Layer([Cell() for x in range(10)])
-    train_images = read_image_file("./train-images-idx3-ubyte")
-    train_labels = read_label_file("./train-labels-idx1-ubyte")
-    trained_layer = use_layer(initial_layer, train_images, train_labels,
-                              train=True)
+    im = Image.open('9_28x28_0000.jpg', 'r')
+    pixel_values = list(im.getdata())
+    print("im size = {}".format(im.size))
+    for x in range(im.size[0]):
+        for y in range(im.size[1]):
+            print("{:3} ".format(pixel_values[x * im.size[0] + y]), end='')
+        print("")
+    header = MNISTImageFileHeader(0, 0, 28, 28)
+    image = MNISTImage(header, pixel_values)
+    layer = train_layer()
+    label = MNISTLabel(9)
+    use_layer(layer, [image], [label])
 
-    test_images = read_image_file("./t10k-images-idx3-ubyte")
-    test_labels = read_label_file("./t10k-labels-idx1-ubyte")
-    use_layer(trained_layer, test_images, test_labels)
+def train_layer():
+    pickle_filename = "nn_trained_layer.dat"
+    layer = None
+    if os.path.isfile(pickle_filename):
+        print("found pickle file = {}".format(pickle_filename))
+        with open(pickle_filename, "rb") as file_obj:
+            layer = pickle.load(file_obj)
+    else:
+        print("could not found pickle file = {}".format(pickle_filename))
+        layer = Layer([Cell() for x in range(10)])
+
+        train_images = read_image_file("./train-images-idx3-ubyte")
+        train_labels = read_label_file("./train-labels-idx1-ubyte")
+        layer = use_layer(layer, train_images, train_labels, train=True)
+
+        train_images = read_image_file("./t10k-images-idx3-ubyte")
+        train_labels = read_label_file("./t10k-labels-idx1-ubyte")
+        layer = use_layer(layer, train_images, train_labels, train=True)
+
+        with open(pickle_filename, "wb") as file_obj:
+            pickle.dump(layer, file_obj)
+    return layer
 
 
 def use_layer(layer, images, labels, train=True):
@@ -148,7 +178,8 @@ def use_layer(layer, images, labels, train=True):
         predicted_number = get_layer_prediction(layer)
         if predicted_number != label.value:
             error_count += 1
-            if not error_count % 100:
+            # if not error_count % 100:
+            if True:
                 print("Prediction: {}, actual: {}, "
                       "success rate: {:.02} (error count: {}) "
                       "at {} image {}".format(
