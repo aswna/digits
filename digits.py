@@ -16,6 +16,7 @@ TODO:
 https://en.wikipedia.org/wiki/Hilbert_curve#Applications_and_mapping_algorithms
 """
 
+import glob
 import os
 import struct
 import pickle
@@ -131,18 +132,26 @@ Layer = namedtuple(
 
 
 def main():
-    im = Image.open('9_28x28_0000.jpg', 'r')
-    pixel_values = list(im.getdata())
-    print("im size = {}".format(im.size))
-    for x in range(im.size[0]):
-        for y in range(im.size[1]):
-            print("{:3} ".format(pixel_values[x * im.size[0] + y]), end='')
-        print("")
-    header = MNISTImageFileHeader(0, 0, 28, 28)
-    image = MNISTImage(header, pixel_values)
+    images = []
+    labels = []
+    image_filenames = glob.glob("digit_9/*-*.png")
+    for image_filename in image_filenames:
+        im = Image.open(image_filename, 'r')
+        pixel_values = list(im.getdata())
+        print("im size = {}".format(im.size))
+        for x in range(im.size[0]):
+            for y in range(im.size[1]):
+                print("{:3} ".format(pixel_values[x * im.size[0] + y]), end='')
+            print("")
+        header = MNISTImageFileHeader(0, 0, 28, 28)
+        image = MNISTImage(header, pixel_values)
+        images.append(image)
+
+        label = MNISTLabel(9)
+        labels.append(label)
     layer = train_layer()
-    label = MNISTLabel(9)
-    use_layer(layer, [image], [label])
+    use_layer(layer, images, labels)
+
 
 def train_layer():
     pickle_filename = "nn_trained_layer.dat"
