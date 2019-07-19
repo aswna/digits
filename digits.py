@@ -65,6 +65,7 @@ class MNISTImage:
             if 2 <= x < n - 2 and 2 <= y < n - 2:
                 # print('* i = {}, x = {}, y = {}, d = {}'.format(i, x, y, d))
                 self.bw_pixels[d] = int(bool(pixels[j]))
+                # self.bw_pixels[d] = int(bool(pixels[j] > 123))
                 # self.bw_pixels[d] = pixels[j] / 255
                 # print('* i = {}, x = {}, y = {}, d = {}, pixel = {}'
                 #       .format(i, x, y, d, self.bw_pixels[d]))
@@ -121,7 +122,9 @@ class Cell:
 
     def __str__(self):
         # TODO: this is a dummy implementation for testing
-        return "weight = {}".format(self.weight[300])
+        return "weights = {}".format(
+            ", ".join(str(int(w * 100) / 100) for w in self.weight))
+        # return "weight = {}".format(self.weight[300])
 
 
 Layer = namedtuple(
@@ -134,6 +137,7 @@ Layer = namedtuple(
 def main():
     images = []
     labels = []
+    # image_filenames = glob.glob("digit_9/*-25.png")
     image_filenames = glob.glob("digit_9/*-*.png")
     for image_filename in image_filenames:
         im = Image.open(image_filename, 'r')
@@ -200,10 +204,12 @@ def use_layer(layer, images, labels, train=True):
                           index)
                       )
                 print_image(image.pixels)
-    print("Overall success rate: {:.02} (error count: {}) [{}]".format(
-        (1 - error_count / (len(images))),
-        error_count,
-        'train' if train else 'test'))
+    print("Overall success rate: {:.02} "
+          "(error count: {}, image count: {}) [{}]".format(
+            (1 - error_count / (len(images))),
+            error_count,
+            len(images),
+            'train' if train else 'test'))
     return layer
 
 
@@ -214,9 +220,11 @@ def get_target_output(label):
 
 
 def train_cell(cell, image, target):
+    # print("cell = {}".format(cell))
     calc_cell_output(cell, image)
     error = get_cell_error(cell, target)
     update_cell_weights(cell, image, error)
+    # print("cell = {}".format(cell))
 
 
 def read_image_file(filename):
