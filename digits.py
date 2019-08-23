@@ -2,6 +2,7 @@
 
 """This is going to be the Python implementation of
 https://mmlind.github.io/Simple_1-Layer_Neural_Network_for_MNIST_Handwriting_Recognition/
+using Genetic Algorithms in the background.
 
 Note: download and extract data files from http://yann.lecun.com/exdb/mnist/
   train-images-idx3-ubyte.gz:  training set images (9912422 bytes)
@@ -11,25 +12,29 @@ Note: download and extract data files from http://yann.lecun.com/exdb/mnist/
 
 See also:
     https://github.com/mmlind/mnist-1lnn/
-
-TODO:
-https://en.wikipedia.org/wiki/Hilbert_curve#Applications_and_mapping_algorithms
 """
 
-import glob
 import os
-import struct
 import pickle
 import random
-# import sys
+import struct
 from collections import namedtuple
 
 
-from PIL import Image
-
 LEARNING_RATE = 0.05
-DIM = 32
 
+
+class MNISTImage:
+    def __init__(self, pixels):
+        self.pixels = pixels
+        self.bw_pixels = [int(bool(pixel)) for pixel in pixels]
+
+
+MNISTLabel = namedtuple(
+    "MNISTLabel", [
+        "value",
+    ]
+)
 
 MNISTImageFileHeader = namedtuple(
     "MNISTImageFileHeader", [
@@ -37,71 +42,6 @@ MNISTImageFileHeader = namedtuple(
         "maxImages",
         "imgWidth",
         "imgHeight",
-    ]
-)
-
-
-class MNISTImage:
-    xy2d_map = dict()
-
-    def __init__(self, header, pixels):
-        self.pixels = pixels
-        assert header.imgWidth == header.imgHeight
-        # TODO: get closest (upper) power of 2
-        n = DIM
-        n2 = n ** 2
-        self.bw_pixels = [0] * n2
-        # print('n2 = {}, pixels = {}'.format(n2, self.bw_pixels))
-        # self.bw_pixels = [int(bool(pixel)) for pixel in pixels]
-        j = 0
-        for i in range(n2):
-            x = i % n
-            y = i // n
-            if (x, y) not in self.xy2d_map:
-                d = xy2d(n, x, y)
-                self.xy2d_map[(x, y)] = d
-            d = self.xy2d_map[(x, y)]
-            # print('  i = {}, x = {}, y = {}, d = {}'.format(i, x, y, d))
-            if 2 <= x < n - 2 and 2 <= y < n - 2:
-                # print('* i = {}, x = {}, y = {}, d = {}'.format(i, x, y, d))
-                self.bw_pixels[d] = int(bool(pixels[j]))
-                # self.bw_pixels[d] = int(bool(pixels[j] > 123))
-                # self.bw_pixels[d] = pixels[j] / 255
-                # print('* i = {}, x = {}, y = {}, d = {}, pixel = {}'
-                #       .format(i, x, y, d, self.bw_pixels[d]))
-                j += 1
-            else:
-                # print('E i = {}, x = {}, y = {}, d = {}'.format(i, x, y, d))
-                self.bw_pixels[d] = 0
-        # sys.exit()
-
-
-# convert (x, y) to d
-def xy2d(n, x, y):
-    d = 0
-    s = n//2
-    while s > 0:
-        rx = (x & s) > 0
-        ry = (y & s) > 0
-        d += s * s * ((3 * rx) ^ ry)
-        x, y = rot(n, x, y, rx, ry)
-        s //= 2
-    return d
-
-
-# rotate/flip a quadrant appropriately
-def rot(n, x, y, rx, ry):
-    if ry == 0:
-        if rx == 1:
-            x = n - 1 - x
-            y = n - 1 - y
-        x, y = y, x
-    return x, y
-
-
-MNISTLabel = namedtuple(
-    "MNISTLabel", [
-        "value",
     ]
 )
 
@@ -115,16 +55,18 @@ MNISTLabelFileHeader = namedtuple(
 
 class Cell:
     def __init__(self):
-        # TODO: use header.imgHeight * header.imgWidth
-        self.weight = [random.uniform(0, 1) for x in range(DIM**2)]
+        self.weight = self._get_init_weight()  # 28x28
         self.size = len(self.weight)
         self.output = 0  # range: [0, 1]
 
     def __str__(self):
         # TODO: this is a dummy implementation for testing
-        return "weights = {}".format(
-            ", ".join(str(int(w * 100) / 100) for w in self.weight))
-        # return "weight = {}".format(self.weight[300])
+        return "weight = {}".format(self.weight[300])
+
+    @staticmethod
+    def _get_init_weight():
+        # TODO: use header.imgHeight * header.imgWidth
+        return [random.uniform(0, 1) for x in range(28*28)]
 
 
 Layer = namedtuple(
@@ -135,64 +77,47 @@ Layer = namedtuple(
 
 
 def main():
-    images = []
-    labels = []
-    # image_filenames = glob.glob("digit_9/*-25.png")
-    image_filenames = glob.glob("digit_9/*-*.png")
-    for image_filename in image_filenames:
-        im = Image.open(image_filename, 'r')
-        pixel_values = list(im.getdata())
-        print("im size = {}".format(im.size))
-        for x in range(im.size[0]):
-            for y in range(im.size[1]):
-                print("{:3} ".format(pixel_values[x * im.size[0] + y]), end='')
-            print("")
-        header = MNISTImageFileHeader(0, 0, 28, 28)
-        image = MNISTImage(header, pixel_values)
-        images.append(image)
-
-        label = MNISTLabel(9)
-        labels.append(label)
-    layer = train_layer()
-    use_layer(layer, images, labels)
+    trained_layer = train_layer()
+    test_layer(trained_layer)
 
 
 def train_layer():
     pickle_filename = "nn_trained_layer.dat"
-    layer = None
+    trained_layer = None
     if os.path.isfile(pickle_filename):
-        print("found pickle file = {}".format(pickle_filename))
+        print("Found pickle file: {}".format(pickle_filename))
         with open(pickle_filename, "rb") as file_obj:
-            layer = pickle.load(file_obj)
+            trained_layer = pickle.load(file_obj)
     else:
-        print("could not found pickle file = {}".format(pickle_filename))
-        layer = Layer([Cell() for x in range(10)])
-
+        print("Could not find pickle file: {}".format(pickle_filename))
+        initial_layer = init_layer()
         train_images = read_image_file("./train-images-idx3-ubyte")
         train_labels = read_label_file("./train-labels-idx1-ubyte")
-        layer = use_layer(layer, train_images, train_labels, train=True)
-
-        train_images = read_image_file("./t10k-images-idx3-ubyte")
-        train_labels = read_label_file("./t10k-labels-idx1-ubyte")
-        layer = use_layer(layer, train_images, train_labels, train=True)
-
+        trained_layer = use_layer(initial_layer, train_images, train_labels,
+                                  train=True)
         with open(pickle_filename, "wb") as file_obj:
-            pickle.dump(layer, file_obj)
-    return layer
+            pickle.dump(trained_layer, file_obj)
+    return trained_layer
 
 
-def use_layer(layer, images, labels, train=True):
+def test_layer(trained_layer):
+    test_images = read_image_file("./t10k-images-idx3-ubyte")
+    test_labels = read_label_file("./t10k-labels-idx1-ubyte")
+    use_layer(trained_layer, test_images, test_labels, train=False)
+
+
+def use_layer(layer, images, labels, train=False):
     error_count = 0
     for index, (image, label) in enumerate(zip(images, labels)):
-        if train:
-            target_output = get_target_output(label)
-            for cell, target in zip(layer.cells, target_output):
+        target_output = get_target_output(label)
+        for cell, target in zip(layer.cells, target_output):
+            calc_cell_output(cell, image)
+            if train:
                 train_cell(cell, image, target)
         predicted_number = get_layer_prediction(layer)
         if predicted_number != label.value:
             error_count += 1
-            # if not error_count % 100:
-            if True:
+            if error_count % 100 == 0:
                 print("Prediction: {}, actual: {}, "
                       "success rate: {:.02} (error count: {}) "
                       "at {} image {}".format(
@@ -200,16 +125,18 @@ def use_layer(layer, images, labels, train=True):
                           label.value,
                           (1 - error_count / (index + 1)),
                           error_count,
-                          'training' if train else 'test',
+                          'training' if train else 'testing',
                           index)
                       )
                 print_image(image.pixels)
     print("Overall success rate: {:.02} "
-          "(error count: {}, image count: {}) [{}]".format(
-            (1 - error_count / (len(images))),
-            error_count,
-            len(images),
-            'train' if train else 'test'))
+          "(error count: {}, image count: {}) [{}]"
+          .format(
+              (1 - error_count / (len(images))),
+              error_count,
+              len(images),
+              'train' if train else 'test')
+          )
     return layer
 
 
@@ -220,11 +147,8 @@ def get_target_output(label):
 
 
 def train_cell(cell, image, target):
-    # print("cell = {}".format(cell))
-    calc_cell_output(cell, image)
     error = get_cell_error(cell, target)
     update_cell_weights(cell, image, error)
-    # print("cell = {}".format(cell))
 
 
 def read_image_file(filename):
@@ -246,8 +170,8 @@ def read_image_file(filename):
     struct_fmt = '>{}B'.format(header.imgHeight * header.imgWidth)
     struct_len = struct.calcsize(struct_fmt)
     images = [
-        MNISTImage(header, pixels)
-        for pixels in struct.iter_unpack(struct_fmt, buffer)
+        MNISTImage(x)
+        for x in struct.iter_unpack(struct_fmt, buffer)
     ]
     # print("first image:\n{}".format(images[0]))
     print("first image:")
@@ -313,7 +237,7 @@ def get_cell_error(cell, target):  # target: 0 or 1
 
 def update_cell_weights(cell, image, error):
     for i in range(cell.size):
-        cell.weight[i] += LEARNING_RATE * image.bw_pixels[i] * error
+        cell.weight[i] += LEARNING_RATE * (image.pixels[i] / 255) * error
 
 
 def get_layer_prediction(layer):
@@ -324,7 +248,12 @@ def get_layer_prediction(layer):
             max_output = layer.cells[i].output
             index_of_cell_with_max_output = i
     return index_of_cell_with_max_output
-    # TODO: show seconds most probable prediction
+    # TODO: show second most probable prediction
+
+
+def init_layer():
+    cells = [Cell() for x in range(10)]
+    return Layer(cells)
 
 
 if __name__ == "__main__":
