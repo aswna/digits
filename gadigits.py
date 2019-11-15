@@ -40,24 +40,32 @@ class Weight():
 
 
 class DigitRecognizer():
-    def __init__(self, digit_to_be_recognized):
-        self._weights = self._get_init_weight()  # 28x28
+    def __init__(self, digit_to_be_recognized, dim=28):
+        self._dim = dim
+        self._weights = self._get_init_weight()
 
-    def foo(self, mnist_image):
+    def fit(self, mnist_image):
+        """Return fitness in range [-1, 1]."""
+
         summa = 0
         for pixel, weight in zip(mnist_image.bw_pixels, self._weights):
+            print("weight = {}".format(weight))
             val = (
-                ((pixel * weight.get_number()) - Weight.min_value) /
+                (pixel * weight.get_number() - Weight.min_value) /
                 (Weight.max_value - Weight.min_value)
             )
             print("val = {}".format(val))
             summa += val
         summa /= len(self._weights)
+        summa = summa * 2 - 1
+        print("==> summa = {}".format(summa))
         return summa
 
-    @staticmethod
-    def _get_init_weight():
-        return [Weight(random.uniform(0, 1)) for x in range(28*28)]
+    def _get_init_weight(self):
+        return [
+            Weight(random.uniform(Weight.min_value, Weight.max_value))
+            for x in range(self._dim ** 2)
+        ]
 
 
 def main():
@@ -74,10 +82,10 @@ def train_population():
     else:
         print("Could not find pickle file: {}".format(pickle_filename))
         # initial_population = init_population()
-        digit0 = DigitRecognizer(0)
+        digit0_recognizer = DigitRecognizer(0)
         train_images = read_image_file("./train-images-idx3-ubyte")
         # train_labels = read_label_file("./train-labels-idx1-ubyte")
-        s = digit0.foo(train_images[0])
+        s = digit0_recognizer.fit(train_images[0])
         print('summa = {}'.format(s))
         # trained_population = use_layer(initial_layer,
         #                                train_images,
