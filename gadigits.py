@@ -22,50 +22,56 @@ class Weight():
 
     def __init__(self, value):
         if isinstance(value, str):
-            self._as_string = value
-            self._as_number = (int(value, base=2) - 32766) / 1000
+            self.as_string = value
+            self.as_number = (int(value, base=2) - 32766) / 1000
         else:
-            self._as_number = value
-            self._as_string = bin(int(value * 1000 + 32766))[2:].zfill(16)
-
-    def get_number(self):
-        return self._as_number
-
-    def get_string(self):
-        return self._as_string
+            self.as_number = value
+            self.as_string = bin(int(value * 1000 + 32766))[2:].zfill(16)
 
     def __str__(self):
-        return 'value = {} as string = {}'.format(self._as_number,
-                                                  self._as_string)
+        return 'Weight({})'.format(self.as_number)
 
 
 class DigitRecognizer():
-    def __init__(self, digit_to_be_recognized, dim=28):
-        self._dim = dim
-        self._weights = self._get_init_weight()
+    def __init__(self, dim=28):
+        self.dim = dim
+        self.weights = self.get_init_weight()
+        self.weights_combined = ''.join(x.as_string for x in self.weights)
 
     def fit(self, mnist_image):
         """Return fitness in range [-1, 1]."""
 
         summa = 0
-        for pixel, weight in zip(mnist_image.bw_pixels, self._weights):
+        for pixel, weight in zip(mnist_image.bw_pixels, self.weights):
             print("weight = {}".format(weight))
             val = (
-                (pixel * weight.get_number() - Weight.min_value) /
+                (pixel * weight.as_number - Weight.min_value) /
                 (Weight.max_value - Weight.min_value)
             )
             print("val = {}".format(val))
             summa += val
-        summa /= len(self._weights)
+        summa /= len(self.weights)
         summa = summa * 2 - 1
         print("==> summa = {}".format(summa))
         return summa
 
-    def _get_init_weight(self):
+    def get_init_weight(self):
         return [
             Weight(random.uniform(Weight.min_value, Weight.max_value))
-            for x in range(self._dim ** 2)
+            for x in range(self.dim ** 2)
         ]
+
+    def __str__(self):
+        return 'DigitRecognizer({})'.format(
+            ', '.join(str(weight) for weight in self.weights))
+
+
+class DigitRecognizers():
+    def __init__(self):
+        self.digit_recognizers = [DigitRecognizer(dim=2) for i in range(4)]
+
+    def __str__(self):
+        return 'DigitRecognizers({})'.format(', '.join(str(dr) for dr in self.digit_recognizers))
 
 
 def main():
@@ -82,7 +88,7 @@ def train_population():
     else:
         print("Could not find pickle file: {}".format(pickle_filename))
         # initial_population = init_population()
-        digit0_recognizer = DigitRecognizer(0)
+        digit0_recognizer = DigitRecognizer()
         train_images = read_image_file("./train-images-idx3-ubyte")
         # train_labels = read_label_file("./train-labels-idx1-ubyte")
         s = digit0_recognizer.fit(train_images[0])
