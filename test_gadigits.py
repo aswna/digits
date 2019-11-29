@@ -59,19 +59,19 @@ class TestDigitRecognizer(unittest.TestCase):
     def test_fit_with_max_weights_on_full_white_image(self):
         self.random_mock.uniform.return_value = Weight.max_value
         mnist_image_mock = unittest.mock.Mock(bw_pixels=[1, 1, 1, 1])
-        dr = DigitRecognizer(dim=2)
+        dr = DigitRecognizer(digit=0, dim=2)
         self.assertEqual(1, dr.fit(mnist_image_mock))
 
     def test_fit_with_min_weights_on_full_white_image(self):
         self.random_mock.uniform.return_value = Weight.min_value
         mnist_image_mock = unittest.mock.Mock(bw_pixels=[1, 1, 1, 1])
-        dr = DigitRecognizer(dim=2)
+        dr = DigitRecognizer(digit=0, dim=2)
         self.assertEqual(-1, dr.fit(mnist_image_mock))
 
     def test_fit_with_max_weights_on_half_white_image(self):
         self.random_mock.uniform.return_value = Weight.max_value
         mnist_image_mock = unittest.mock.Mock(bw_pixels=[0, 1, 0, 1])
-        dr = DigitRecognizer(dim=2)
+        dr = DigitRecognizer(digit=0, dim=2)
         self.assertAlmostEqual(0.5, dr.fit(mnist_image_mock), delta=0.01)
 
     def test_zero_pixels_do_not_matter(self):
@@ -81,21 +81,21 @@ class TestDigitRecognizer(unittest.TestCase):
             Weight.max_value, 0,
             Weight.max_value, 0
         ]
-        dr = DigitRecognizer(dim=2)
+        dr = DigitRecognizer(digit=0, dim=2)
         self.assertAlmostEqual(0, dr.fit(mnist_image_mock), delta=0.01)
 
         self.random_mock.uniform.side_effect = [
             0, 0,
             0, 0
         ]
-        dr = DigitRecognizer(dim=2)
+        dr = DigitRecognizer(digit=0, dim=2)
         self.assertAlmostEqual(0, dr.fit(mnist_image_mock), delta=0.01)
 
         self.random_mock.uniform.side_effect = [
             Weight.min_value, 0,
             Weight.min_value, 0
         ]
-        dr = DigitRecognizer(dim=2)
+        dr = DigitRecognizer(digit=0, dim=2)
         self.assertAlmostEqual(0, dr.fit(mnist_image_mock), delta=0.01)
 
     def test_fit_with_mixed_weights_on_half_white_image(self):
@@ -104,7 +104,7 @@ class TestDigitRecognizer(unittest.TestCase):
             0, Weight.min_value
         ]
         mnist_image_mock = unittest.mock.Mock(bw_pixels=[0, 1, 0, 1])
-        dr = DigitRecognizer(dim=2)
+        dr = DigitRecognizer(digit=0, dim=2)
         self.assertAlmostEqual(-0.5, dr.fit(mnist_image_mock), delta=0.01)
 
     def test_weigth_concatenated(self):
@@ -112,7 +112,7 @@ class TestDigitRecognizer(unittest.TestCase):
             0, Weight.min_value,
             0, Weight.min_value
         ]
-        dr = DigitRecognizer(dim=2)
+        dr = DigitRecognizer(digit=0, dim=2)
         self.assertEqual(
             '01111111111111100000000000000000'
             '01111111111111100000000000000000', dr.weights_combined)
@@ -122,10 +122,12 @@ class TestDigitRecognizer(unittest.TestCase):
             0, Weight.min_value,
             0, Weight.min_value
         ]
-        dr = DigitRecognizer(dim=2)
+        dr = DigitRecognizer(digit=0, dim=2)
         self.assertEqual(
             'DigitRecognizer('
+            'digit=0, weights=['
             'Weight(0), Weight(-32.766), Weight(0), Weight(-32.766)'
+            ']'
             ')', str(dr))
 
 
@@ -144,11 +146,14 @@ class TestDigitRecognizers(unittest.TestCase):
             2, 2, 2, 2,
             3, 3, 3, 3,
         ]
-        drs = DigitRecognizers()
+        drs = DigitRecognizers(0)
         self.assertEqual(
             'DigitRecognizers('
-            'DigitRecognizer(Weight(0), Weight(0), Weight(0), Weight(0)), '
-            'DigitRecognizer(Weight(1), Weight(1), Weight(1), Weight(1)), '
-            'DigitRecognizer(Weight(2), Weight(2), Weight(2), Weight(2)), '
-            'DigitRecognizer(Weight(3), Weight(3), Weight(3), Weight(3))'
+            'digit=0, '
+            'recognizers=['
+            'DigitRecognizer(digit=0, weights=[Weight(0), Weight(0), Weight(0), Weight(0)]), '
+            'DigitRecognizer(digit=0, weights=[Weight(1), Weight(1), Weight(1), Weight(1)]), '
+            'DigitRecognizer(digit=0, weights=[Weight(2), Weight(2), Weight(2), Weight(2)]), '
+            'DigitRecognizer(digit=0, weights=[Weight(3), Weight(3), Weight(3), Weight(3)])'
+            ']'
             ')', str(drs))

@@ -14,6 +14,7 @@ import pickle
 import random
 
 from mnist_utils import read_image_file
+from mnist_utils import read_label_file
 
 
 class Weight():
@@ -33,7 +34,8 @@ class Weight():
 
 
 class DigitRecognizer():
-    def __init__(self, dim=28):
+    def __init__(self, digit, dim=28):
+        self.digit = digit
         self.dim = dim
         self.weights = self.get_init_weight()
         self.weights_combined = ''.join(x.as_string for x in self.weights)
@@ -62,44 +64,63 @@ class DigitRecognizer():
         ]
 
     def __str__(self):
-        return 'DigitRecognizer({})'.format(
+        return 'DigitRecognizer(digit={}, weights=[{}])'.format(
+            self.digit,
             ', '.join(str(weight) for weight in self.weights))
 
 
 class DigitRecognizers():
-    def __init__(self):
-        self.digit_recognizers = [DigitRecognizer(dim=2) for i in range(4)]
+    def __init__(self, digit):
+        self.digit = digit
+        self.digit_recognizers = [DigitRecognizer(digit=digit, dim=2) for i in range(4)]
 
     def __str__(self):
-        return 'DigitRecognizers({})'.format(', '.join(str(dr) for dr in self.digit_recognizers))
+        return 'DigitRecognizers(digit={}, recognizers=[{}])'.format(
+            self.digit,
+            ', '.join(str(dr) for dr in self.digit_recognizers))
+
+
+class DigitsRecognizer():
+    def __init__(self):
+        self.digits_recognizers = [DigitRecognizers(i) for i in range(10)]
+
+    def train(self, images, labels):
+        pass
+
+    def test(self, images, labels):
+        # print recognized digits as top list with probability/confidence
+        pass
 
 
 def main():
-    train_population()
+    digits_recognizer = train_recognizers()
+    test_recognizers(digits_recognizer)
 
 
-def train_population():
-    pickle_filename = "ga_trained_population.dat"
-    trained_population = None
+def train_recognizers():
+    pickle_filename = "ga_trained_recognizers.dat"
+    trained_recognizers = None
     if os.path.isfile(pickle_filename):
         print("Found pickle file: {}".format(pickle_filename))
         with open(pickle_filename, "rb") as file_obj:
-            trained_population = pickle.load(file_obj)
+            trained_recognizers = pickle.load(file_obj)
     else:
         print("Could not find pickle file: {}".format(pickle_filename))
-        # initial_population = init_population()
-        digit0_recognizer = DigitRecognizer()
+        dr = DigitsRecognizer()
+
         train_images = read_image_file("./train-images-idx3-ubyte")
-        # train_labels = read_label_file("./train-labels-idx1-ubyte")
-        s = digit0_recognizer.fit(train_images[0])
-        print('summa = {}'.format(s))
-        # trained_population = use_layer(initial_layer,
-        #                                train_images,
-        #                                train_labels,
-        #                                train=True)
+        train_labels = read_label_file("./train-labels-idx1-ubyte")
+        dr.train(train_images, train_labels)
         # with open(pickle_filename, "wb") as file_obj:
-        #     pickle.dump(trained_population, file_obj)
-    return trained_population
+        #     pickle.dump(dr, file_obj)
+        trained_recognizers = dr
+    return trained_recognizers
+
+
+def test_recognizers(digits_recognizer):
+    test_images = read_image_file("./t10k-images-idx3-ubyte")
+    test_labels = read_label_file("./t10k-labels-idx1-ubyte")
+    digits_recognizer.test(test_images, test_labels)
 
 
 if __name__ == "__main__":
